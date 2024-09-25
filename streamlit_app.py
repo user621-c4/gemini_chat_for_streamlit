@@ -86,7 +86,7 @@ if check_password():
     # モデルの初期化（システムプロンプト付き）
     model = genai.GenerativeModel('gemini-1.5-pro-latest', system_instruction=system_prompt)
 
-    st.title("Gemini チャットボット")
+    st.title("日文老師")
 
     # チャット履歴の初期化
     if "messages" not in st.session_state:
