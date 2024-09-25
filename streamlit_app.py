@@ -84,7 +84,7 @@ if check_password():
 """
 
     # モデルの初期化（システムプロンプト付き）
-    model = genai.GenerativeModel('gemini-1.5-pro-latest', system_instruction=system_prompt)
+    model = genai.GenerativeModel('Gemini-1.5-Pro-002', system_instruction=system_prompt)
 
     st.title("日文老師")
 
