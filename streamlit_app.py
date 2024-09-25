@@ -4,37 +4,43 @@ import os
 
 # パスワードチェック関数
 def check_password():
-    if "password_correct" not in st.session_state:
-        password = st.text_input("パスワードを入力してください", type="password")
-        if password == st.secrets["password"]:
+    def password_entered():
+        if st.session_state["password"] == st.secrets["password"]:
             st.session_state["password_correct"] = True
+            del st.session_state["password"]
         else:
-            st.error("パスワードが違います。")
             st.session_state["password_correct"] = False
-    return st.session_state.get("password_correct", False)
 
-# Gemini APIキーを取得する関数
-def get_api_key():
-    api_key = os.environ.get('GEMINI_API_KEY')
-    if api_key:
-        return api_key
+    if "password_correct" not in st.session_state:
+        st.text_input(
+            "パスワードを入力してください", 
+            type="password", 
+            on_change=password_entered, 
+            key="password"
+        )
+        return False
+    elif not st.session_state["password_correct"]:
+        st.text_input(
+            "パスワードが違います。再度入力してください", 
+            type="password", 
+            on_change=password_entered, 
+            key="password"
+        )
+        return False
     else:
-        st.error("GEMINI_API_KEY が設定されていません。環境変数を確認してください。")
-        st.stop()
-
-# チャット履歴を表示する関数
-def display_chat_history(messages):
-    for message in messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        return True
 
 # メイン部分
 if check_password():
-    # Gemini APIキーを取得
-    api_key = get_api_key()
+    # Gemini APIキーを環境変数から取得
+    api_key = os.environ.get('GEMINI_API_KEY')
 
     # Gemini APIの設定
-    genai.configure(api_key=api_key)
+    if api_key:
+        genai.configure(api_key=api_key)
+    else:
+        st.error("GEMINI_API_KEY が設定されていません。環境変数を確認してください。")
+        st.stop()
 
     # システムプロンプトの設定
     system_prompt = """あなたは中国人に教えるのが上手なプロの日本語教師です。日本語の文章が入力された場合、制約条件に従い、その文章を添削しなさい。
@@ -67,7 +73,8 @@ if check_password():
 ## 出力例3
 訂正前: 彼女は日本語を話せられますが、読むのが苦手です。
 訂正後: 彼女は日本語を話せますが、読むのが苦手です。
-「話せられます」是错误的用法，正确的形式是「話せます」。在日语中，可能动词的正确形式不需要加「られ」。因此，「話せられます」应改为「話せます」。"""
+「話せられます」是错误的用法，正确的形式是「話せます」。在日语中，可能动词的正确形式不需要加「られ」。因此，「話せられます」应改为「話せます」。
+"""
 
     # モデルの初期化（システムプロンプト付き）
     model = genai.GenerativeModel('gemini-1.5-pro-latest', system_instruction=system_prompt)
@@ -79,7 +86,9 @@ if check_password():
         st.session_state.messages = []
 
     # チャット履歴の表示
-    display_chat_history(st.session_state.messages)
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
     # ユーザー入力
     if prompt := st.chat_input("メッセージを入力してください"):
@@ -89,11 +98,8 @@ if check_password():
 
         # Geminiからの応答
         with st.chat_message("assistant"):
-            try:
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-            except Exception as e:
-                st.error(f"Gemini API エラー: {e}")
+            response = model.generate_content(prompt)
+            st.markdown(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
 else:
     st.warning("正しいパスワードを入力してください。")
